@@ -1,21 +1,88 @@
 import os
 import time
+import random
 import requests
 from playwright.sync_api import sync_playwright
 
-# GitHub Secrets
+# GitHub Secrets se token fetch karna
 BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
-TARGET_COUNT = 10
-asins = set()
+# Aapki di hui Kitchen Products ki list
+kitchen_products = [
+    # 1–40: Popular Appliances
+    "Air fryer", "Air fryer toaster oven", "Pressure cooker", "Multi-cooker", 
+    "Rice cooker", "Slow cooker", "Countertop blender", "Personal smoothie blender", 
+    "Food processor", "Stand mixer", "Hand mixer", "Electric kettle", 
+    "Espresso machine", "Coffee maker", "Coffee grinder", "Milk frother", 
+    "Toaster", "Toaster oven", "Electric griddle", "Electric skillet", 
+    "Panini press", "Electric grill", "Electric egg cooker", "Ice cream maker", 
+    "Bread maker", "Sous vide cooker", "Electric meat grinder", "Electric pasta maker", 
+    "Electric juicer", "Cold press juicer", "Ice maker machine", "Electric tortilla maker", 
+    "Electric waffle maker", "Electric popcorn maker", "Electric hot pot", 
+    "Electric steamer", "Countertop pizza oven", "Smart WiFi cooker", 
+    "Smart oven", "Smart air fryer",
 
-print("Launching Playwright Browser with Proxy...")
+    # 41–80: Viral Kitchen Gadgets
+    "Vegetable chopper", "Mandoline slicer", "Spiralizer", "Garlic press", 
+    "Lemon squeezer", "Avocado slicer", "Apple slicer", "Egg slicer", 
+    "Cherry pitter", "Pineapple corer", "Herb scissors", "Kitchen scissors", 
+    "Rotary cheese grater", "Microplane zester", "Potato masher", "Meat tenderizer", 
+    "Burger press", "Dumpling maker", "Tortilla press", "Sushi rolling kit", 
+    "Corn stripper", "Onion holder slicer", "Butter slicer", "Pizza cutter", 
+    "Bench scraper", "Dough scraper", "Salad chopper bowl", "Salad spinner", 
+    "Oil sprayer bottle", "Basting brush", "Meat injector", "Digital food thermometer", 
+    "Candy thermometer", "Magnetic knife holder", "Knife sharpening stone", 
+    "Kitchen scale", "Food cutting board set", "Rolling chopper", "Vegetable dicer", 
+    "Meat shredder claws",
+
+    # 81–120: Baking Products
+    "Baking sheet", "Silicone baking mat", "Cake pan", "Springform pan", 
+    "Muffin pan", "Cupcake pan", "Bundt pan", "Bread loaf pan", "Donut pan", 
+    "Tart pan", "Pie dish", "Brownie pan", "Pizza stone", "Pizza peel", 
+    "Rolling pin", "Cookie cutters", "Cookie scoop", "Cookie press", 
+    "Cooling rack", "Cake decorating kit", "Piping bags", "Icing spatula", 
+    "Cake turntable", "Cake leveler", "Cake scraper", "Fondant smoother", 
+    "Pastry brush", "Pastry blender", "Dough whisk", "Bread proofing basket", 
+    "Bread lame scoring tool", "Oven thermometer", "Pastry mat", "Cake stand", 
+    "Cupcake carrier", "Cake carrier", "Dough divider", "Pie weights", 
+    "Biscuit cutter", "Chocolate mold",
+
+    # 121–150: Kitchen Storage
+    "Airtight food containers", "Glass meal prep containers", "Vacuum food sealer", 
+    "Vacuum sealer bags", "Bread box", "Produce storage container", 
+    "Fridge organizer bins", "Refrigerator egg holder", "Soda can organizer", 
+    "Spice rack", "Magnetic spice jars", "Drawer organizers", "Dish drying rack", 
+    "Sink caddy", "Under-sink organizer", "Pantry shelf organizer", 
+    "Lazy Susan turntable", "Cabinet shelf riser", "Pot lid organizer", 
+    "Hanging pot rack", "Mug tree", "Coffee pod holder", "Tea bag organizer", 
+    "Oil dispenser bottle", "Honey dispenser", "Flour storage container", 
+    "Rice storage container", "Lunch box", "Bento box", "Insulated food jar",
+
+    # 151–183: Smart & Cleaning Kitchen Tools
+    "Motion sensor trash can", "Compost bin", "Automatic soap dispenser", 
+    "Sink strainer", "Sink stopper", "Bottle cleaning brush", "Straw cleaning brush", 
+    "Drain cleaner tool", "Garbage disposal cleaner", "Kitchen mop", 
+    "Countertop cleaning wipes", "Oven cleaner", "Microwave cleaner", 
+    "Fridge cleaner", "Dishwasher cleaner", "Steam cleaner", "Smart kitchen scale", 
+    "Bluetooth meat thermometer", "Smart fridge camera", "Smart kitchen display", 
+    "Smart coffee maker", "Smart kettle", "Smart oven", "Voice-controlled microwave", 
+    "Automatic pan stirrer", "Digital timer", "Magnetic timer", "Recipe stand", 
+    "Tablet holder for kitchen", "Cookbook stand", "Grocery list board", 
+    "Magnetic whiteboard planner", "Electric jar opener"
+]
+
+TARGET_COUNT = 10
 
 def run_scraper():
-    # Playwright start karna
+    # Randomly ek product select karna
+    selected_product = random.choice(kitchen_products)
+    search_query = selected_product.replace(" ", "+")
+    print(f"Today's Selected Product: {selected_product}")
+    
+    asins = set()
+
     with sync_playwright() as p:
-        # Asli Chromium browser launch karna (headless=True matlab background me chalega)
         browser = p.chromium.launch(
             headless=True,
             proxy={
@@ -25,7 +92,6 @@ def run_scraper():
             }
         )
         
-        # Browser ka context set karna (Tier-1 USA ki feeling dene ke liye)
         context = browser.new_context(
             locale="en-US",
             timezone_id="America/New_York",
@@ -34,52 +100,36 @@ def run_scraper():
         
         page = context.new_page()
 
-        for page_num in range(1, 10):
-            if len(asins) >= TARGET_COUNT:
-                break
-
-            url = f"https://www.amazon.com/s?k=kitchen+gadgets&page={page_num}"
-            print(f"Loading Page {page_num}...")
+        # 10 ASINs pehle page par hi mil jayenge, isliye zyada pages scan karne ki zaroorat nahi
+        url = f"https://www.amazon.com/s?k={search_query}&page=1"
+        try:
+            page.goto(url, wait_until="domcontentloaded", timeout=30000)
+            time.sleep(3) # Human-like delay
             
-            try:
-                # Page open karna
-                page.goto(url, wait_until="domcontentloaded", timeout=30000)
-                
-                # Human-like delay taaki page poora load ho jaye
-                time.sleep(3)
-                
-                # Playwright se direct 'data-asin' nikalna (Regex ki zaroorat nahi)
-                elements = page.locator("div[data-asin]").all()
-                
-                added_now = 0
-                for el in elements:
-                    asin = el.get_attribute("data-asin")
-                    if asin and len(asin) == 10:
-                        asins.add(asin)
-                        added_now += 1
-                        if len(asins) >= TARGET_COUNT:
-                            break
-                            
-                print(f"Found {added_now} ASINs on Page {page_num}. Total: {len(asins)}/{TARGET_COUNT}")
-                
-            except Exception as e:
-                print(f"Error on page {page_num}: {e}")
+            elements = page.locator("div[data-asin]").all()
+            
+            for el in elements:
+                asin = el.get_attribute("data-asin")
+                # Check valid 10-character ASIN
+                if asin and len(asin) == 10 and asin.isupper():
+                    asins.add(asin)
+                    if len(asins) >= TARGET_COUNT:
+                        break
+                        
+        except Exception as e:
+            print(f"Error while scraping: {e}")
 
         browser.close()
+        
+    return list(asins)[:TARGET_COUNT]
 
-# Scraper function chalana
-run_scraper()
+# Script run karna
+final_asins = run_scraper()
 
-# --- Telegram Messaging Logic ---
-asin_list = list(asins)[:TARGET_COUNT]
-
-if asin_list:
-    print(f"\nSending {len(asin_list)} ASINs to Telegram...")
-    
-    # Sequence mein plain text message
-    message = "🇺🇸 Tier-1 Kitchen Products (Playwright):\n\n"
-    for index, asin in enumerate(asin_list, start=1):
-        message += f"{index}. {asin}\n"
+# Telegram Messaging
+if final_asins:
+    # ⚠️ SIRF ASIN numbers, koi extra text nahi jaisa aapne manga tha
+    message = "\n".join(final_asins)
 
     requests.get(
         f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
@@ -88,6 +138,6 @@ if asin_list:
             "text": message
         }
     )
-    print("✅ Successfully Sent to Telegram!")
+    print(f"✅ Sent {len(final_asins)} pure ASINs to Telegram!")
 else:
-    print("⚠️ 0 ASINs found. Proxy ya Amazon ne block kiya hoga.")
+    print("⚠️ 0 ASINs found. Proxy ya block ka issue ho sakta hai.")
