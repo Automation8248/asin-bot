@@ -1,44 +1,32 @@
-import requests
-import re
-import time
+name: Daily Tier-1 Kitchen ASINs
 
-BOT_TOKEN = "8797653971:AAGeiZQVtOLGn4gU3g3WRnYCgLRMWShVwLg"
-CHAT_ID = "7584043609"
+on:
+  schedule:
+    # Yeh daily subah 6:00 AM UTC (Indian time ke hisaab se subah 11:30 AM) par chalega
+    - cron: "0 6 * * *" 
+  workflow_dispatch:      # Aapko manual 'Run workflow' ka button dega testing ke liye
 
-headers = {
-    "User-Agent": "Mozilla/5.0"
-}
+jobs:
+  scrape_and_send:
+    runs-on: ubuntu-latest
 
-asins = set()
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-for page in range(1, 21):
-    url = f"https://www.amazon.com/s?k=kitchen+gadgets&page={page}"
-    r = requests.get(url, headers=headers)
-    
-    found = re.findall(r'/dp/([A-Z0-9]{10})', r.text)
-    
-    for a in found:
-        asins.add(a)
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
 
-    time.sleep(2)
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests beautifulsoup4
 
-for asin in asins:
-
-    link = f"https://www.amazon.com/dp/{asin}"
-
-    message = f"""
-Kitchen Product Found 🍳
-
-ASIN: {asin}
-
-Link:
-{link}
-"""
-
-    requests.get(
-        f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
-        params={
-            "chat_id": CHAT_ID,
-            "text": message
-        }
-    )
+      - name: Run Scraper Bot
+        env:
+          # GitHub Secrets se Telegram credentials fetch karna
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python asin.py
