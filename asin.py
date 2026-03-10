@@ -7,7 +7,7 @@ from playwright.sync_api import sync_playwright
 BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
-TARGET_COUNT = 60
+TARGET_COUNT = 10
 asins = set()
 
 print("Launching Playwright Browser with Proxy...")
