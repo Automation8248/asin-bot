@@ -1,17 +1,16 @@
-name: Daily Tier-1 Kitchen ASINs
+name: Playwright Amazon ASIN Bot
 
 on:
   schedule:
-    # Yeh daily subah 6:00 AM UTC (Indian time ke hisaab se subah 11:30 AM) par chalega
-    - cron: "0 6 * * *" 
-  workflow_dispatch:      # Aapko manual 'Run workflow' ka button dega testing ke liye
+    - cron: "0 6 * * *"
+  workflow_dispatch:
 
 jobs:
-  scrape_and_send:
+  scrape_and_notify:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repository
+      - name: Checkout Code
         uses: actions/checkout@v4
 
       - name: Setup Python
@@ -22,11 +21,13 @@ jobs:
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install requests beautifulsoup4
+          pip install requests playwright
+          
+      - name: Install Playwright Browsers
+        run: playwright install chromium
 
-      - name: Run Scraper Bot
+      - name: Run Playwright Bot
         env:
-          # GitHub Secrets se Telegram credentials fetch karna
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: python asin.py
