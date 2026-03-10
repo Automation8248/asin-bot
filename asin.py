@@ -2,8 +2,8 @@ import requests
 import re
 import time
 
-BOT_TOKEN = "YOUR_TELEGRAM_BOT_TOKEN"
-CHAT_ID = "YOUR_CHAT_ID"
+BOT_TOKEN = "8797653971:AAGeiZQVtOLGn4gU3g3WRnYCgLRMWShVwLg"
+CHAT_ID = "7584043609"
 
 headers = {
     "User-Agent": "Mozilla/5.0"
