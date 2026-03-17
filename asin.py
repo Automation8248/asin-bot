@@ -110,8 +110,16 @@ def run_scraper():
             
             for el in elements:
                 asin = el.get_attribute("data-asin")
-                # Check valid 10-character ASIN
-                if asin and len(asin) == 10 and asin.isupper():
+                
+                # NAYA LOGIC: Check karega ki product ka naam page ke text mein hai ya nahi
+                try:
+                    card_text = el.inner_text().lower()
+                    is_kitchen_related = selected_product.lower() in card_text
+                except:
+                    is_kitchen_related = False
+
+                # Check valid 10-character ASIN aur strictly kitchen match
+                if asin and len(asin) == 10 and asin.isupper() and is_kitchen_related:
                     asins.add(asin)
                     if len(asins) >= TARGET_COUNT:
                         break
